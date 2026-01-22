@@ -1,0 +1,550 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>多語系點餐</title>
+  <style>
+    :root { --bg:#0b0f14; --card:#121826; --muted:#91a0b5; --text:#e8eef7; --line:#223049; --accent:#7aa2ff; }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Noto Sans,"PingFang TC","Microsoft JhengHei",sans-serif;background:var(--bg);color:var(--text);}
+    a{color:var(--accent);text-decoration:none}
+    .wrap{max-width:1100px;margin:0 auto;padding:18px}
+    header{display:flex;gap:14px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:14px}
+    h1{font-size:18px;margin:0;font-weight:700}
+    .sub{color:var(--muted);font-size:12px;margin-top:6px}
+    .bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    input[type="search"]{background:#0f1624;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;min-width:260px;outline:none}
+    select,button{background:#0f1624;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;cursor:pointer}
+    button:hover{border-color:#2f4164}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:12px}
+    @media (max-width:980px){.grid{grid-template-columns:1fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .tabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:8px 10px;border-radius:999px;border:1px solid var(--line);background:#0f1624;color:var(--text);cursor:pointer;font-size:12px}
+    .tab.active{border-color:var(--accent);box-shadow:0 0 0 2px rgba(122,162,255,.15) inset}
+    .sec-title{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:10px 0 8px}
+    .sec-title h2{font-size:14px;margin:0}
+    .pill{font-size:11px;color:var(--muted)}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .item{padding:12px;border-radius:14px;border:1px solid #1b2740;background:#0f1624}
+    .k{font-size:12px;color:var(--muted);margin-bottom:6px}
+    .line1{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+    .phrase{font-size:15px;font-weight:650;letter-spacing:.2px}
+    .meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .tag{font-size:11px;padding:3px 8px;border-radius:999px;border:1px solid #2b3b5d;color:#cfe0ff;background:#101b2d}
+    .roman{margin-top:6px;font-size:12px;color:#c7d3e8}
+    .cn{margin-top:6px;font-size:12px;color:var(--muted)}
+    .btn{font-size:12px}
+    textarea{width:100%;min-height:120px;background:#0f1624;border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:12px;resize:vertical;outline:none}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .mini{font-size:12px;color:var(--muted);line-height:1.5}
+    .hr{height:1px;background:var(--line);margin:12px 0;border-radius:1px}
+    .toast{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#0f1624;border:1px solid var(--line);padding:10px 12px;border-radius:999px;color:var(--text);font-size:12px;opacity:0;pointer-events:none;transition:.2s}
+    .toast.show{opacity:1}
+    .kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;border:1px solid #2b3b5d;background:#101b2d;padding:2px 6px;border-radius:8px;color:#cfe0ff}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>多語系點餐</h1>
+      <div class="sub"></div>
+    </div>
+    <div class="bar">
+      <input id="q" type="search" placeholder="搜尋：例如『不辣 / to go / 알레르기 / ベジ』" />
+      <select id="cat">
+        <option value="all">全部分類</option>
+      </select>
+      <button id="drill" class="btn">抽一張練習</button>
+      <button id="reset" class="btn">清除備忘</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <section class="card">
+      <div class="sec-title">
+        <h2>語言</h2>
+        <div class="pill">點一下切換；句子可複製</div>
+      </div>
+      <div id="tabs" class="tabs"></div>
+
+      <div class="hr"></div>
+
+      <div class="sec-title">
+        <h2>句庫</h2>
+        <div class="pill"><span class="kbd">Ctrl</span>+<span class="kbd">F</span> 也可直接找</div>
+      </div>
+      <div id="list" class="list"></div>
+    </section>
+
+    <aside class="card">
+      <div class="sec-title">
+        <h2>固定模板（填空→複製）</h2>
+        <div class="pill">把括號換成你的內容</div>
+      </div>
+      <div id="templates" class="list"></div>
+
+      <div class="hr"></div>
+
+      <div class="sec-title">
+        <h2>旅途備忘</h2>
+        <div class="pill">自動儲存到瀏覽器</div>
+      </div>
+      <textarea id="note" placeholder="例：我不吃香菜/花生；對辣度敏感；付款偏好刷卡；常點：牛肉河粉、叉燒飯…"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="copyNote" class="btn">複製備忘</button>
+        <span id="noteStatus" class="mini"></span>
+      </div>
+
+      <div class="hr"></div>
+
+      <div class="mini">
+        <div><b>GitHub Pages</b></div>
+        <ol>
+          <li>建立 repo → 放入 <span class="kbd">index.html</span></li>
+          <li>Repo → Settings → Pages</li>
+          <li>Source: Deploy from a branch</li>
+          <li>Branch: <span class="kbd">main</span> / <span class="kbd">/ (root)</span></li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div id="toast" class="toast">已複製</div>
+
+<script>
+  // ====== Data ======
+  const LANGS = [
+    { id: "yue", name: "粵語", hint: "香港常用書面＋口語" },
+    { id: "ja",  name: "日文", hint: "店內/外帶/付款/過敏" },
+    { id: "en",  name: "英文", hint: "萬用版" },
+    { id: "ko",  name: "韓文", hint: "敬語常用" },
+    { id: "vi",  name: "越南文", hint: "常用旅遊點餐" },
+    { id: "th",  name: "泰文", hint: "簡單好用" },
+  ];
+
+  const CATS = [
+    "入店/開場", "點餐", "客製/忌口", "辣度/口味", "加點/續杯", "付款/結帳", "問題/確認"
+  ];
+
+  // Phrase item: {cat, key, lines: {langId:{p, r, cn}} }
+  const PHRASES = [
+    // 入店/開場
+    mk("入店/開場","要兩位 / 幾位",{
+      yue:{p:"唔該，兩位。", r:"m4 goi1, loeng5 wai2.", cn:"麻煩，兩位（用餐）。"},
+      ja:{p:"すみません、2人です。", r:"Sumimasen, futari desu.", cn:"不好意思，我們兩位。"},
+      en:{p:"Hi, table for two, please.", r:"", cn:"你好，兩位。"},
+      ko:{p:"저희 두 명이요.", r:"Jeo-hui du myeong-i-yo.", cn:"我們兩位。"},
+      vi:{p:"Cho tôi bàn cho hai người.", r:"", cn:"請給我兩位的位子。"},
+      th:{p:"ขอโต๊ะสำหรับสองคนครับ/ค่ะ", r:"khǒo tô (sǎm-ràp) sɔ̌ɔng khon khráp/khâ", cn:"請給我兩位座位（男/女）。"},
+    }),
+    mk("入店/開場","有空位嗎",{
+      yue:{p:"請問而家有位嗎？", r:"cing2 man6 ji4 gaa1 jau5 wai2 maa3?", cn:"請問現在有位嗎？"},
+      ja:{p:"席は空いていますか？", r:"Seki wa aite imasu ka?", cn:"有空位嗎？"},
+      en:{p:"Do you have a table available?", r:"", cn:"有空位嗎？"},
+      ko:{p:"자리 있어요?", r:"Jari isseoyo?", cn:"有位子嗎？"},
+      vi:{p:"Bây giờ có bàn trống không?", r:"", cn:"現在有空桌嗎？"},
+      th:{p:"มีโต๊ะว่างไหมครับ/คะ", r:"mii tô wâang mǎi khráp/khá", cn:"有空桌嗎？"},
+    }),
+    mk("入店/開場","可以看菜單嗎",{
+      yue:{p:"可唔可以睇下餐牌？", r:"ho2 m4 ho2 ji5 tai2 haa5 caan1 paai4?", cn:"可以看一下菜單嗎？"},
+      ja:{p:"メニューを見てもいいですか？", r:"Menyū o mite mo ii desu ka?", cn:"可以看菜單嗎？"},
+      en:{p:"May I see the menu, please?", r:"", cn:"可以看菜單嗎？"},
+      ko:{p:"메뉴 좀 볼 수 있을까요?", r:"Menyu jom bol su isseulkkayo?", cn:"可以看菜單嗎？"},
+      vi:{p:"Cho tôi xem thực đơn được không?", r:"", cn:"可以給我看菜單嗎？"},
+      th:{p:"ขอดูเมนูหน่อยได้ไหมครับ/คะ", r:"khǒo duu meenǔu nɔ̀i dâi mǎi khráp/khá", cn:"可以給我看菜單嗎？"},
+    }),
+
+    // 點餐
+    mk("點餐","我要這個",{
+      yue:{p:"我要呢個，唔該。", r:"ngo5 jiu3 ni1 go3, m4 goi1.", cn:"我要這個，麻煩。"},
+      ja:{p:"これをお願いします。", r:"Kore o onegai shimasu.", cn:"我要這個，拜託。"},
+      en:{p:"I’ll have this one, please.", r:"", cn:"我要這個。"},
+      ko:{p:"이거 주세요.", r:"I-geo juseyo.", cn:"請給我這個。"},
+      vi:{p:"Cho tôi món này.", r:"", cn:"請給我這道。"},
+      th:{p:"เอาอันนี้ครับ/ค่ะ", r:"ao an-níi khráp/khâ", cn:"我要這個（男/女）。"},
+    }),
+    mk("點餐","我要（品項）",{
+      yue:{p:"我要（___），唔該。", r:"ngo5 jiu3 (___), m4 goi1.", cn:"我要（___），麻煩。"},
+      ja:{p:"（___）をください。", r:"(___) o kudasai.", cn:"請給我（___）。"},
+      en:{p:"I’d like (___), please.", r:"", cn:"我想要（___）。"},
+      ko:{p:"(___) 주세요.", r:"(___) juseyo.", cn:"請給我（___）。"},
+      vi:{p:"Cho tôi (___).", r:"", cn:"請給我（___）。"},
+      th:{p:"ขอ (___) ครับ/ค่ะ", r:"khǒo (___) khráp/khâ", cn:"請給我（___）。"},
+    }),
+    mk("點餐","內用/外帶",{
+      yue:{p:"喺度食／拎走？我係（內用/外帶）。", r:"hai2 dou6 sik6 / ling1 zau2? ngo5 hai6 (...).", cn:"內用/外帶？我是（...）。"},
+      ja:{p:"店内です／テイクアウトです。", r:"Tennai desu / Teikuauto desu.", cn:"內用/外帶。"},
+      en:{p:"For here / To go.", r:"", cn:"內用/外帶。"},
+      ko:{p:"매장에서 먹을게요 / 포장해주세요.", r:"Mae-jang-eseo meogeulgeyo / Pojang-hae juseyo.", cn:"內用/請幫我外帶。"},
+      vi:{p:"Ăn tại chỗ / Mang đi.", r:"", cn:"內用/外帶。"},
+      th:{p:"ทานที่นี่ / ใส่กลับบ้านครับ/ค่ะ", r:"thaan thîi-nîi / sài klàp bâan khráp/khâ", cn:"內用/外帶回家。"},
+    }),
+    mk("點餐","可以推薦嗎",{
+      yue:{p:"有咩推薦？", r:"jau5 me1 teoi1 zin3?", cn:"有什麼推薦？"},
+      ja:{p:"おすすめは何ですか？", r:"Osusume wa nan desu ka?", cn:"推薦是什麼？"},
+      en:{p:"What do you recommend?", r:"", cn:"你推薦什麼？"},
+      ko:{p:"추천 메뉴가 뭐예요?", r:"Chucheon menyuga mwoyeyo?", cn:"推薦菜是什麼？"},
+      vi:{p:"Bạn gợi ý món nào?", r:"", cn:"你推薦哪一道？"},
+      th:{p:"แนะนำเมนูหน่อยได้ไหมครับ/คะ", r:"nɛ́ɛ-nam meenǔu nɔ̀i dâi mǎi khráp/khá", cn:"可以推薦菜單嗎？"},
+    }),
+
+    // 客製/忌口
+    mk("客製/忌口","不要香菜",{
+      yue:{p:"唔要芫荽。", r:"m4 jiu3 jyun4 seoi1.", cn:"不要香菜。"},
+      ja:{p:"パクチー抜きでお願いします。", r:"Pakuchī nuki de onegai shimasu.", cn:"不要香菜，拜託。"},
+      en:{p:"No cilantro, please.", r:"", cn:"不要香菜。"},
+      ko:{p:"고수 빼주세요.", r:"Gosu bbae juseyo.", cn:"請去掉香菜。"},
+      vi:{p:"Không cho rau mùi, nhé.", r:"", cn:"不要香菜。"},
+      th:{p:"ไม่เอาผักชีครับ/ค่ะ", r:"mâi ao phàk-chii khráp/khâ", cn:"不要香菜。"},
+    }),
+    mk("客製/忌口","不要花生／堅果",{
+      yue:{p:"唔要花生／堅果。", r:"m4 jiu3 faa1 sang1 / gin1 gwo2.", cn:"不要花生/堅果。"},
+      ja:{p:"ピーナッツ（ナッツ）なしでお願いします。", r:"Pīnattsu (nattsu) nashi de onegai shimasu.", cn:"不要花生/堅果。"},
+      en:{p:"No peanuts / no nuts, please.", r:"", cn:"不要花生/堅果。"},
+      ko:{p:"땅콩/견과류 빼주세요.", r:"Ttangkong / gyeon-gwa-ryu bbae juseyo.", cn:"請去掉花生/堅果。"},
+      vi:{p:"Không cho đậu phộng / hạt, nhé.", r:"", cn:"不要花生/堅果。"},
+      th:{p:"ไม่ใส่ถั่วลิสง/ถั่วนะครับ/คะ", r:"mâi sài thùa-lí-sǒng / thùa ná khráp/khá", cn:"不要花生/堅果。"},
+    }),
+    mk("客製/忌口","我過敏（____）",{
+      yue:{p:"我對（___）敏感／過敏。", r:"ngo5 deoi3 (___) man5 gam2 / gwo3 man5.", cn:"我對（___）過敏。"},
+      ja:{p:"（___）アレルギーがあります。", r:"(___) arerugī ga arimasu.", cn:"我對（___）過敏。"},
+      en:{p:"I’m allergic to (___).", r:"", cn:"我對（___）過敏。"},
+      ko:{p:"저는 (___) 알레르기가 있어요.", r:"Jeoneun (___) allerugiga isseoyo.", cn:"我對（___）過敏。"},
+      vi:{p:"Tôi bị dị ứng với (___).", r:"", cn:"我對（___）過敏。"},
+      th:{p:"ฉันแพ้ (___) ครับ/ค่ะ", r:"chǎn/phǒm phɛ́ɛ (___) khráp/khâ", cn:"我對（___）過敏。"},
+    }),
+    mk("客製/忌口","素食／不吃肉",{
+      yue:{p:"我食素／唔食肉。", r:"ngo5 sik6 sou3 / m4 sik6 juk6.", cn:"我吃素/不吃肉。"},
+      ja:{p:"ベジタリアンです。肉は食べません。", r:"Bejitarian desu. Niku wa tabemasen.", cn:"我吃素，不吃肉。"},
+      en:{p:"I’m vegetarian. I don’t eat meat.", r:"", cn:"我吃素，不吃肉。"},
+      ko:{p:"저는 채식이에요. 고기는 안 먹어요.", r:"Jeoneun chaesigieyo. Gogineun an meogeoyo.", cn:"我吃素，不吃肉。"},
+      vi:{p:"Tôi ăn chay, không ăn thịt.", r:"", cn:"我吃素，不吃肉。"},
+      th:{p:"ฉันทานมังสวิรัติ ไม่ทานเนื้อครับ/ค่ะ", r:"chǎn/phǒm thaan mang-sà-wí-ràt; mâi thaan nʉ́ʉa khráp/khâ", cn:"我吃素，不吃肉。"},
+    }),
+
+    // 辣度/口味
+    mk("辣度/口味","不辣",{
+      yue:{p:"走辣／唔辣。", r:"zau2 laat6 / m4 laat6.", cn:"不要辣。"},
+      ja:{p:"辛くしないでください。", r:"Karakushinaide kudasai.", cn:"請不要辣。"},
+      en:{p:"Not spicy, please.", r:"", cn:"不要辣。"},
+      ko:{p:"안 맵게 해주세요.", r:"An maepge hae juseyo.", cn:"請做不辣。"},
+      vi:{p:"Không cay, nhé.", r:"", cn:"不要辣。"},
+      th:{p:"ไม่เผ็ดครับ/ค่ะ", r:"mâi phèt khráp/khâ", cn:"不要辣。"},
+    }),
+    mk("辣度/口味","小辣/中辣/大辣",{
+      yue:{p:"小辣／中辣／大辣。", r:"siu2 laat6 / zung1 laat6 / daai6 laat6.", cn:"小/中/大辣。"},
+      ja:{p:"辛さは（少し／普通／強め）で。", r:"Karasa wa (sukoshi / futsū / tsuyome) de.", cn:"辣度（小/中/大）。"},
+      en:{p:"Mild / medium / extra spicy.", r:"", cn:"小/中/大辣。"},
+      ko:{p:"덜 맵게 / 보통 / 아주 맵게.", r:"Deol maepge / botong / aju maepge.", cn:"少辣/正常/很辣。"},
+      vi:{p:"Ít cay / cay vừa / rất cay.", r:"", cn:"小辣/中辣/大辣。"},
+      th:{p:"เผ็ดน้อย / เผ็ดกลาง / เผ็ดมาก", r:"phèt nɔ́ɔi / phèt klaang / phèt mâak", cn:"小辣/中辣/大辣。"},
+    }),
+    mk("辣度/口味","這個辣嗎",{
+      yue:{p:"呢個辣唔辣？", r:"ni1 go3 laat6 m4 laat6?", cn:"這個辣嗎？"},
+      ja:{p:"これは辛いですか？", r:"Kore wa karai desu ka?", cn:"這個會辣嗎？"},
+      en:{p:"Is this spicy?", r:"", cn:"這個辣嗎？"},
+      ko:{p:"이거 매워요?", r:"I-geo maewoyo?", cn:"這個辣嗎？"},
+      vi:{p:"Món này cay không?", r:"", cn:"這道辣嗎？"},
+      th:{p:"อันนี้เผ็ดไหมครับ/คะ", r:"an-níi phèt mǎi khráp/khá", cn:"這個辣嗎？"},
+    }),
+
+    // 加點/續杯
+    mk("加點/續杯","再來一份",{
+      yue:{p:"可唔可以再嚟一份？", r:"ho2 m4 ho2 ji5 zoi3 lai4 jat1 fan6?", cn:"可以再來一份嗎？"},
+      ja:{p:"もう一つお願いします。", r:"Mō hitotsu onegai shimasu.", cn:"再一份拜託。"},
+      en:{p:"One more, please.", r:"", cn:"再來一份。"},
+      ko:{p:"하나 더 주세요.", r:"Hana deo juseyo.", cn:"再給我一份。"},
+      vi:{p:"Cho tôi thêm một phần nữa.", r:"", cn:"再來一份。"},
+      th:{p:"ขอเพิ่มอีกหนึ่งที่ครับ/ค่ะ", r:"khǒo pʉ̂ʉm ìik nʉ̀ng thîi khráp/khâ", cn:"再加一份。"},
+    }),
+    mk("加點/續杯","可以加水/續杯嗎",{
+      yue:{p:"可唔可以加水／添飲？", r:"ho2 m4 ho2 ji5 gaa1 seoi2 / tim1 jam2?", cn:"可以加水/續杯嗎？"},
+      ja:{p:"お水をもう一杯いただけますか？", r:"Omizu o mō ippai itadakemasu ka?", cn:"可以再給我一杯水嗎？"},
+      en:{p:"Could I get a refill / some water?", r:"", cn:"可以續杯/給水嗎？"},
+      ko:{p:"물 좀 더 주실 수 있나요?", r:"Mul jom deo jusil su innayo?", cn:"可以再給我水嗎？"},
+      vi:{p:"Cho tôi xin thêm nước được không?", r:"", cn:"可以再給我水嗎？"},
+      th:{p:"ขอน้ำเพิ่มได้ไหมครับ/คะ", r:"khǒo náam pʉ̂ʉm dâi mǎi khráp/khá", cn:"可以再給我水嗎？"},
+    }),
+
+    // 付款/結帳
+    mk("付款/結帳","買單/結帳",{
+      yue:{p:"埋單，唔該。", r:"maai4 daan1, m4 goi1.", cn:"買單，麻煩。"},
+      ja:{p:"お会計お願いします。", r:"Okaikei onegai shimasu.", cn:"麻煩結帳。"},
+      en:{p:"Check, please.", r:"", cn:"麻煩結帳。"},
+      ko:{p:"계산 부탁드려요.", r:"Gyesan butak-deuryeoyo.", cn:"麻煩結帳。"},
+      vi:{p:"Tính tiền giúp tôi.", r:"", cn:"麻煩結帳。"},
+      th:{p:"คิดเงินด้วยครับ/ค่ะ", r:"khít ngoen dûai khráp/khâ", cn:"麻煩結帳。"},
+    }),
+    mk("付款/結帳","可以刷卡嗎",{
+      yue:{p:"可唔可以用信用卡？", r:"ho2 m4 ho2 ji5 jung6 seon3 jung3 kaat1?", cn:"可以刷卡嗎？"},
+      ja:{p:"カードは使えますか？", r:"Kādo wa tsukaemasu ka?", cn:"可以刷卡嗎？"},
+      en:{p:"Do you take credit cards?", r:"", cn:"可以刷卡嗎？"},
+      ko:{p:"카드 돼요?", r:"Kadeu dwaeyo?", cn:"可以刷卡嗎？"},
+      vi:{p:"Ở đây có nhận thẻ không?", r:"", cn:"這裡收卡嗎？"},
+      th:{p:"รับบัตรเครดิตไหมครับ/คะ", r:"ráp bàt 크레-ดิด mǎi khráp/khá", cn:"收信用卡嗎？"},
+    }),
+    mk("付款/結帳","可以分開結帳嗎",{
+      yue:{p:"可唔可以分開埋單？", r:"ho2 m4 ho2 ji5 fan1 hoi1 maai4 daan1?", cn:"可以分開結帳嗎？"},
+      ja:{p:"別々に会計できますか？", r:"Betsubetsu ni kaikei dekimasu ka?", cn:"可以分開結帳嗎？"},
+      en:{p:"Can we split the bill?", r:"", cn:"可以分開結帳嗎？"},
+      ko:{p:"따로 계산할 수 있어요?", r:"Ttaro gyesanhal su isseoyo?", cn:"可以分開結帳嗎？"},
+      vi:{p:"Có thể tính tiền riêng không?", r:"", cn:"可以分開結帳嗎？"},
+      th:{p:"แยกบิลได้ไหมครับ/คะ", r:"yâek bin dâi mǎi khráp/khá", cn:"可以分帳嗎？"},
+    }),
+
+    // 問題/確認
+    mk("問題/確認","這是什麼",{
+      yue:{p:"呢個係乜嘢？", r:"ni1 go3 hai6 mat1 je5?", cn:"這是什麼？"},
+      ja:{p:"これは何ですか？", r:"Kore wa nan desu ka?", cn:"這是什麼？"},
+      en:{p:"What is this?", r:"", cn:"這是什麼？"},
+      ko:{p:"이거 뭐예요?", r:"I-geo mwoyeyo?", cn:"這是什麼？"},
+      vi:{p:"Cái này là gì?", r:"", cn:"這是什麼？"},
+      th:{p:"อันนี้คืออะไรครับ/คะ", r:"an-níi khʉʉ a-rai khráp/khá", cn:"這是什麼？"},
+    }),
+    mk("問題/確認","可以再說一次嗎",{
+      yue:{p:"可唔可以再講一次？", r:"ho2 m4 ho2 ji5 zoi3 gong2 jat1 ci3?", cn:"可以再說一次嗎？"},
+      ja:{p:"もう一度お願いします。", r:"Mō ichido onegai shimasu.", cn:"麻煩再說一次。"},
+      en:{p:"Could you say that again, please?", r:"", cn:"可以再說一次嗎？"},
+      ko:{p:"다시 한 번 말씀해 주세요.", r:"Dasi han beon malsseumhae juseyo.", cn:"請再說一次。"},
+      vi:{p:"Bạn nói lại được không?", r:"", cn:"可以再說一次嗎？"},
+      th:{p:"พูดอีกครั้งได้ไหมครับ/คะ", r:"phûut ìik khráng dâi mǎi khráp/khá", cn:"可以再說一次嗎？"},
+    }),
+    mk("問題/確認","我不太會（語言）",{
+      yue:{p:"我廣東話唔係幾好。", r:"ngo5 gwong2 dung1 waa2 m4 hai6 gei2 hou2.", cn:"我粵語不太好。"},
+      ja:{p:"日本語があまり上手じゃありません。", r:"Nihongo ga amari jōzu ja arimasen.", cn:"我日文不太好。"},
+      en:{p:"Sorry, my (English/Japanese/…) isn’t very good.", r:"", cn:"抱歉，我的（…）不太好。"},
+      ko:{p:"한국어를 잘 못해요.", r:"Hangug-eoreul jal motaeyo.", cn:"我韓文不太好。"},
+      vi:{p:"Tiếng Việt của tôi không tốt lắm.", r:"", cn:"我越南文不太好。"},
+      th:{p:"ผม/ฉันพูดภาษาไทยไม่ค่อยได้ครับ/ค่ะ", r:"phǒm/chǎn phûut phaa-sǎa thai mâi khɔ̂i dâi khráp/khâ", cn:"我泰文不太好。"},
+    }),
+  ];
+
+  const TEMPLATES = [
+    { cat:"點餐", key:"我要（品項）＋（數量）", fill:"（___）を（___）つお願いします。 / I’d like (___) x (___).", map:{
+      yue:{p:"我要（___）要（___）份，唔該。", r:"ngo5 jiu3 (___) jiu3 (___) fan6, m4 goi1.", cn:"我要（___）（___）份。"},
+      ja:{p:"（___）を（___）つお願いします。", r:"(___) o (___) tsu onegai shimasu.", cn:"（___）要（___）份。"},
+      en:{p:"I’d like (___) x (___), please.", r:"", cn:"我想要（___）x（___）。"},
+      ko:{p:"(___) (___)개 주세요.", r:"(___) (___)gae juseyo.", cn:"（___）（___）個/份。"},
+      vi:{p:"Cho tôi (___) (___) phần.", r:"", cn:"（___）（___）份。"},
+      th:{p:"ขอ (___) จำนวน (___) ครับ/ค่ะ", r:"khǒo (___) jam-nuan (___) khráp/khâ", cn:"（___）（___）份。"},
+    }},
+    { cat:"客製/忌口", key:"不要（食材）", fill:"No (___), please.", map:{
+      yue:{p:"唔要（___）。", r:"m4 jiu3 (___).", cn:"不要（___）。"},
+      ja:{p:"（___）抜きでお願いします。", r:"(___) nuki de onegai shimasu.", cn:"不要（___）。"},
+      en:{p:"No (___), please.", r:"", cn:"不要（___）。"},
+      ko:{p:"(___) 빼주세요.", r:"(___) bbae juseyo.", cn:"請不要（___）。"},
+      vi:{p:"Không cho (___), nhé.", r:"", cn:"不要（___）。"},
+      th:{p:"ไม่เอา (___) ครับ/ค่ะ", r:"mâi ao (___) khráp/khâ", cn:"不要（___）。"},
+    }},
+    { cat:"辣度/口味", key:"辣度（不辣/小辣/中辣/大辣）", fill:"Mild / medium / spicy.", map:{
+      yue:{p:"辣度：（唔辣／小辣／中辣／大辣）。", r:"laat6 dou6: (m4 laat6 / siu2 / zung1 / daai6).", cn:"辣度：不辣/小/中/大。"},
+      ja:{p:"辛さ：（なし／弱め／普通／強め）で。", r:"Karasa: (nashi / yowame / futsū / tsuyome) de.", cn:"辣度：不辣/小/中/大。"},
+      en:{p:"Spice level: not spicy / mild / medium / hot.", r:"", cn:"辣度設定。"},
+      ko:{p:"맵기: 안 맵게 / 덜 맵게 / 보통 / 아주 맵게.", r:"Maepgi: ...", cn:"辣度設定。"},
+      vi:{p:"Độ cay: không cay / ít cay / vừa / rất cay.", r:"", cn:"辣度設定。"},
+      th:{p:"ระดับความเผ็ด: ไม่เผ็ด / เผ็ดน้อย / เผ็ดกลาง / เผ็ดมาก", r:"ra-dàp khwaam phèt: ...", cn:"辣度設定。"},
+    }},
+    { cat:"付款/結帳", key:"付款方式（刷卡/現金/行動支付）", fill:"Do you take card / cash / mobile pay?", map:{
+      yue:{p:"可唔可以（刷卡／現金／電子支付）？", r:"ho2 m4 ho2 ji5 (...)?", cn:"可以（...）嗎？"},
+      ja:{p:"（カード／現金／QR決済）は使えますか？", r:"(... ) wa tsukaemasu ka?", cn:"可以用（...）嗎？"},
+      en:{p:"Do you take card / cash / mobile pay?", r:"", cn:"收卡/現金/行動支付嗎？"},
+      ko:{p:"카드/현금/간편결제 돼요?", r:"... dwaeyo?", cn:"可以（...）嗎？"},
+      vi:{p:"Có nhận thẻ/tiền mặt/thanh toán điện tử không?", r:"", cn:"可以（...）嗎？"},
+      th:{p:"รับบัตร/เงินสด/สแกนจ่ายไหมครับ/คะ", r:"ráp ... mǎi khráp/khá", cn:"收卡/現金/掃碼嗎？"},
+    }},
+  ];
+
+  function mk(cat, key, lines){ return {cat, key, lines}; }
+
+  // ====== State ======
+  let lang = localStorage.getItem("lang") || "ja";
+  let q = "";
+  let cat = "all";
+
+  // ====== UI Helpers ======
+  const $ = sel => document.querySelector(sel);
+  const toast = (msg="已複製") => {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"), 900);
+  };
+
+  async function copyText(text){
+    try{
+      await navigator.clipboard.writeText(text);
+      toast("已複製");
+    }catch(e){
+      // fallback
+      const ta = document.createElement("textarea");
+      ta.value = text; document.body.appendChild(ta);
+      ta.select(); document.execCommand("copy");
+      document.body.removeChild(ta);
+      toast("已複製");
+    }
+  }
+
+  // ====== Render ======
+  function renderTabs(){
+    const tabs = $("#tabs");
+    tabs.innerHTML = "";
+    LANGS.forEach(L=>{
+      const b = document.createElement("button");
+      b.className = "tab" + (L.id===lang ? " active":"");
+      b.textContent = `${L.name}`;
+      b.title = L.hint;
+      b.onclick = ()=>{
+        lang = L.id;
+        localStorage.setItem("lang", lang);
+        renderTabs(); renderList(); renderTemplates();
+      };
+      tabs.appendChild(b);
+    });
+  }
+
+  function renderCatOptions(){
+    const sel = $("#cat");
+    // only once
+    if (sel.options.length > 1) return;
+    CATS.forEach(c=>{
+      const o = document.createElement("option");
+      o.value = c; o.textContent = c;
+      sel.appendChild(o);
+    });
+  }
+
+  function norm(s){ return (s||"").toLowerCase(); }
+
+  function matches(item){
+    if (cat !== "all" && item.cat !== cat) return false;
+    if (!q) return true;
+
+    const L = item.lines?.[lang] || {};
+    const hay = [
+      item.cat, item.key,
+      L.p, L.r, L.cn
+    ].map(x=>norm(x)).join(" | ");
+    return hay.includes(norm(q));
+  }
+
+  function renderList(){
+    const list = $("#list");
+    list.innerHTML = "";
+
+    const filtered = PHRASES.filter(matches);
+    if (!filtered.length){
+      list.innerHTML = `<div class="mini">無符合項目。可改用：更短的關鍵字（例如：辣 / card / アレ / 고수）</div>`;
+      return;
+    }
+
+    filtered.forEach(item=>{
+      const L = item.lines[lang] || {};
+      const p = L.p || "(此語言尚未補句)";
+      const r = L.r || "";
+      const cn = L.cn || "";
+
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `
+        <div class="k">${item.cat} · ${item.key}</div>
+        <div class="line1">
+          <div class="phrase">${escapeHtml(p)}</div>
+          <div class="meta">
+            <span class="tag">${escapeHtml(LANGS.find(x=>x.id===lang)?.name || lang)}</span>
+            <button class="btn">複製</button>
+          </div>
+        </div>
+        ${r ? `<div class="roman">讀音：${escapeHtml(r)}</div>` : ``}
+        ${cn ? `<div class="cn">中文：${escapeHtml(cn)}</div>` : ``}
+      `;
+      el.querySelector("button").onclick = ()=>copyText(p);
+      list.appendChild(el);
+    });
+  }
+
+  function renderTemplates(){
+    const wrap = $("#templates");
+    wrap.innerHTML = "";
+    TEMPLATES.forEach(t=>{
+      const L = t.map[lang] || {};
+      const p = L.p || "(此語言尚未補句)";
+      const r = L.r || "";
+      const cn = L.cn || "";
+      const el = document.createElement("div");
+      el.className = "item";
+      el.innerHTML = `
+        <div class="k">${t.cat} · ${t.key}</div>
+        <div class="line1">
+          <div class="phrase">${escapeHtml(p)}</div>
+          <div class="meta">
+            <button class="btn">複製</button>
+          </div>
+        </div>
+        ${r ? `<div class="roman">讀音：${escapeHtml(r)}</div>` : ``}
+        ${cn ? `<div class="cn">中文：${escapeHtml(cn)}</div>` : ``}
+        <div class="cn">填空提示：${escapeHtml(t.fill)}</div>
+      `;
+      el.querySelector("button").onclick = ()=>copyText(p);
+      wrap.appendChild(el);
+    });
+  }
+
+  function escapeHtml(s){
+    return (s||"").replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+  }
+
+  // ====== Drill ======
+  function randomItem(){
+    const pool = PHRASES.filter(matches);
+    if (!pool.length) return null;
+    return pool[Math.floor(Math.random()*pool.length)];
+  }
+
+  function drill(){
+    const it = randomItem();
+    if (!it) { toast("沒有可抽的句子"); return; }
+    const L = it.lines[lang] || {};
+    const p = L.p || "";
+    const r = L.r ? `\n讀音：${L.r}` : "";
+    const cn = L.cn ? `\n中文：${L.cn}` : "";
+    alert(`[${it.cat}] ${it.key}\n\n${p}${r}${cn}`);
+  }
+
+  // ====== Notes ======
+  function loadNote(){
+    const v = localStorage.getItem("note") || "";
+    $("#note").value = v;
+  }
+
+  function saveNote(){
+    localStorage.setItem("note", $("#note").value);
+    $("#noteStatus").textContent = "已儲存";
+    setTimeout(()=>$("#noteStatus").textContent="", 800);
+  }
+
+  function clearAll(){
+    localStorage.removeItem("note");
+    $("#note").value = "";
+    toast("已清除");
+  }
+
+  // ====== Wire ======
+  renderCatOptions();
+  renderTabs();
+  renderList();
+  renderTemplates();
+  loadNote();
+
+  $("#q").addEventListener("input", e=>{ q = e.target.value.trim(); renderList(); });
+  $("#cat").addEventListener("change", e=>{ cat = e.target.value; renderList(); });
+  $("#drill").addEventListener("click", drill);
+  $("#note").addEventListener("input", saveNote);
+  $("#copyNote").addEventListener("click", ()=>copyText($("#note").value || ""));
+  $("#reset").addEventListener("click", clearAll);
+</script>
+</body>
+</html>
